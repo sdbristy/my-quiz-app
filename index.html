@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JumpInto - Student Portal</title>
+    <title>JumpInto Learning</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-       const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyDUIRfRRkBo6a0a2NH6sebeA172SWYhYB0",
   authDomain: "myquizapp-f7c58.firebaseapp.com",
   projectId: "myquizapp-f7c58",
@@ -22,65 +22,72 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let questions = [];
+        let data = [];
         let currentIdx = 0;
 
-        async function loadQuestions() {
-            const q = query(collection(db, "questions"), orderBy("createdAt", "asc"));
+        async function loadData() {
+            const q = query(collection(db, "quiz_data"), orderBy("createdAt", "asc"));
             const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((doc) => questions.push(doc.data()));
-            if(questions.length > 0) showQuestion();
-            else document.getElementById('qText').innerText = "কোনো প্রশ্ন পাওয়া যায়নি!";
+            querySnapshot.forEach(doc => data.push(doc.data()));
+            if(data.length > 0) render();
+            else document.body.innerHTML = "<div class='flex h-screen items-center justify-center font-bold'>কোনো ডেটা পাওয়া যায়নি!</div>";
         }
 
-        function showQuestion() {
-            const cur = questions[currentIdx];
-            document.getElementById('qText').innerText = cur.question;
-            const optDiv = document.getElementById('options');
+        function render() {
+            const cur = data[currentIdx];
+            const pBox = document.getElementById('passage-box');
+            const pContent = document.getElementById('passage-content');
+            
+            // প্যাসেজ থাকলে দেখাবে, না থাকলে ফুল উইডথ প্রশ্ন দেখাবে
+            if(cur.passage) {
+                pBox.classList.remove('hidden');
+                pContent.innerText = cur.passage;
+            } else {
+                pBox.classList.add('hidden');
+            }
+
+            document.getElementById('question-text').innerText = cur.question;
+            const optDiv = document.getElementById('options-div');
             optDiv.innerHTML = '';
             
-            // Progress bar update
-            const progress = ((currentIdx) / questions.length) * 100;
-            document.getElementById('progress').style.width = progress + "%";
-
             cur.options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = "w-full p-4 mb-3 text-left border-2 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all font-medium text-gray-700";
+                btn.className = "w-full p-5 mb-4 text-left border-2 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all text-lg font-medium shadow-sm";
                 btn.innerText = opt;
-                btn.onclick = () => checkAns(opt, cur.answer);
+                btn.onclick = () => {
+                    if(opt === cur.answer) {
+                        currentIdx++;
+                        if(currentIdx < data.length) render();
+                        else document.getElementById('main-container').innerHTML = "<h2 class='text-3xl font-bold text-green-600 m-auto'>সব প্রশ্নের উত্তর দেওয়া শেষ! চমৎকার!</h2>";
+                    } else {
+                        alert("ভুল উত্তর! আবার চেষ্টা করো।");
+                    }
+                };
                 optDiv.appendChild(btn);
             });
+            
+            document.getElementById('prog-bar').style.width = ((currentIdx / data.length) * 100) + "%";
         }
-
-        function checkAns(selected, correct) {
-            if(selected === correct) {
-                currentIdx++;
-                if(currentIdx < questions.length) {
-                    showQuestion();
-                } else {
-                    document.getElementById('progress').style.width = "100%";
-                    document.getElementById('quiz-card').innerHTML = "<h2 class='text-2xl font-bold text-center text-green-600'>অভিনন্দন! আপনি সবগুলো প্রশ্নের সঠিক উত্তর দিয়েছেন।</h2>";
-                }
-            } else {
-                const res = document.getElementById('res');
-                res.innerText = "ভুল উত্তর! আবার চেষ্টা করো।";
-                setTimeout(() => res.innerText = "", 2000);
-            }
-        }
-
-        window.onload = loadQuestions;
+        window.onload = loadData;
     </script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-6">
-    <div class="w-full max-w-md mb-4">
-        <div class="h-2 w-full bg-gray-200 rounded-full">
-            <div id="progress" class="h-2 bg-blue-500 rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
+<body class="bg-gray-50 h-screen overflow-hidden flex flex-col">
+    <div class="w-full h-2 bg-gray-200">
+        <div id="prog-bar" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
     </div>
-    <div id="quiz-card" class="bg-white w-full max-w-md p-8 rounded-3xl shadow-lg border border-gray-100">
-        <h2 id="qText" class="text-2xl font-bold text-gray-800 mb-8 leading-tight">লোড হচ্ছে...</h2>
-        <div id="options"></div>
-        <p id="res" class="text-red-500 text-center mt-4 font-bold h-6"></p>
+
+    <div id="main-container" class="flex flex-1 overflow-hidden flex-col md:flex-row">
+        <div id="passage-box" class="flex-1 p-8 overflow-y-auto bg-white border-r hidden border-gray-100">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">প্যাসেজ / তথ্য</h3>
+            <div id="passage-content" class="text-xl leading-relaxed text-gray-700 whitespace-pre-line"></div>
+        </div>
+
+        <div class="flex-1 p-8 overflow-y-auto flex flex-col justify-center bg-gray-50">
+            <div class="max-w-lg mx-auto w-full">
+                <h2 id="question-text" class="text-2xl md:text-3xl font-bold text-gray-900 mb-10 leading-snug"></h2>
+                <div id="options-div"></div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
