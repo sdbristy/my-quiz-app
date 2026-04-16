@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Add Questions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // 🔥 আপনার নিজের Firebase Config এখানে বসান
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.saveQuestion = async () => {
+            const q = document.getElementById('qIn').value;
+            const a = document.getElementById('aIn').value;
+            const b = document.getElementById('bIn').value;
+            const correct = document.getElementById('correctIn').value;
+
+            if(!q || !a || !b || !correct) return alert("সবগুলো ঘর পূরণ করুন!");
+
+            try {
+                await addDoc(collection(db, "questions"), {
+                    question: q,
+                    options: [a, b],
+                    answer: correct,
+                    createdAt: new Date()
+                });
+                alert("প্রশ্ন সফলভাবে সেভ হয়েছে!");
+                document.querySelectorAll('input').forEach(i => i.value = '');
+            } catch (e) { alert("Error: " + e.message); }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md">
+        <h2 class="text-2xl font-bold mb-6 text-center">নতুন প্রশ্ন যোগ করুন</h2>
+        <input id="qIn" type="text" placeholder="প্রশ্ন" class="w-full p-2 mb-3 border rounded">
+        <input id="aIn" type="text" placeholder="অপশন ১" class="w-full p-2 mb-3 border rounded">
+        <input id="bIn" type="text" placeholder="অপশন ২" class="w-full p-2 mb-3 border rounded">
+        <input id="correctIn" type="text" placeholder="সঠিক উত্তর (হুবহু লিখুন)" class="w-full p-2 mb-6 border rounded border-green-500">
+        <button onclick="saveQuestion()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold">Data Input দিন</button>
+    </div>
+</body>
+</html>

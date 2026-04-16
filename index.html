@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JumpInto Clone - Interactive Quiz</title>
+    <title>JumpInto - Student Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 🔥 আপনার Firebase Config এখানে বসান
        const firebaseConfig = {
   apiKey: "AIzaSyDUIRfRRkBo6a0a2NH6sebeA172SWYhYB0",
   authDomain: "myquizapp-f7c58.firebaseapp.com",
@@ -23,34 +22,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ডেটা ইনপুট দেওয়ার ফাংশন (Admin)
-        window.saveQuestion = async () => {
-            const q = document.getElementById('qIn').value;
-            const a = document.getElementById('aIn').value;
-            const b = document.getElementById('bIn').value;
-            const correct = document.getElementById('correctIn').value;
-
-            try {
-                await addDoc(collection(db, "questions"), {
-                    question: q,
-                    options: [a, b],
-                    answer: correct
-                });
-                alert("প্রশ্ন সেভ হয়েছে!");
-                location.reload();
-            } catch (e) { console.error(e); }
-        }
-
-        // স্টুডেন্টদের জন্য প্রশ্ন লোড করা
         let questions = [];
         let currentIdx = 0;
 
-        window.startQuiz = async () => {
-            const querySnapshot = await getDocs(collection(db, "questions"));
+        async function loadQuestions() {
+            const q = query(collection(db, "questions"), orderBy("createdAt", "asc"));
+            const querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => questions.push(doc.data()));
             if(questions.length > 0) showQuestion();
-            document.getElementById('admin-panel').classList.add('hidden');
-            document.getElementById('quiz-panel').classList.remove('hidden');
+            else document.getElementById('qText').innerText = "কোনো প্রশ্ন পাওয়া যায়নি!";
         }
 
         function showQuestion() {
@@ -58,9 +38,14 @@
             document.getElementById('qText').innerText = cur.question;
             const optDiv = document.getElementById('options');
             optDiv.innerHTML = '';
+            
+            // Progress bar update
+            const progress = ((currentIdx) / questions.length) * 100;
+            document.getElementById('progress').style.width = progress + "%";
+
             cur.options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = "w-full p-4 mb-2 border-2 rounded-xl hover:bg-blue-50 transition";
+                btn.className = "w-full p-4 mb-3 text-left border-2 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all font-medium text-gray-700";
                 btn.innerText = opt;
                 btn.onclick = () => checkAns(opt, cur.answer);
                 optDiv.appendChild(btn);
@@ -70,31 +55,32 @@
         function checkAns(selected, correct) {
             if(selected === correct) {
                 currentIdx++;
-                if(currentIdx < questions.length) showQuestion();
-                else alert("সব প্রশ্নের সঠিক উত্তর দিয়েছেন! চমৎকার!");
+                if(currentIdx < questions.length) {
+                    showQuestion();
+                } else {
+                    document.getElementById('progress').style.width = "100%";
+                    document.getElementById('quiz-card').innerHTML = "<h2 class='text-2xl font-bold text-center text-green-600'>অভিনন্দন! আপনি সবগুলো প্রশ্নের সঠিক উত্তর দিয়েছেন।</h2>";
+                }
             } else {
-                alert("ভুল উত্তর, আবার চেষ্টা করো।");
+                const res = document.getElementById('res');
+                res.innerText = "ভুল উত্তর! আবার চেষ্টা করো।";
+                setTimeout(() => res.innerText = "", 2000);
             }
         }
+
+        window.onload = loadQuestions;
     </script>
 </head>
-<body class="bg-slate-100 min-h-screen p-5 flex flex-col items-center">
-
-    <div id="admin-panel" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md mb-10">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">অ্যাডমিন: প্রশ্ন যোগ করুন</h2>
-        <input id="qIn" type="text" placeholder="প্রশ্ন লিখুন" class="w-full p-2 mb-2 border rounded">
-        <input id="aIn" type="text" placeholder="অপশন ১" class="w-full p-2 mb-2 border rounded">
-        <input id="bIn" type="text" placeholder="অপশন ২" class="w-full p-2 mb-2 border rounded">
-        <input id="correctIn" type="text" placeholder="সঠিক উত্তরটি আবার লিখুন" class="w-full p-2 mb-4 border rounded">
-        <button onclick="saveQuestion()" class="bg-green-500 text-white px-4 py-2 rounded w-full">সেভ করুন</button>
-        <hr class="my-4">
-        <button onclick="startQuiz()" class="bg-blue-600 text-white px-4 py-2 rounded w-full">কুইজ শুরু করুন (Student View)</button>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-md mb-4">
+        <div class="h-2 w-full bg-gray-200 rounded-full">
+            <div id="progress" class="h-2 bg-blue-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
     </div>
-
-    <div id="quiz-panel" class="hidden bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <div id="qText" class="text-xl font-semibold mb-6 text-center text-gray-700"></div>
+    <div id="quiz-card" class="bg-white w-full max-w-md p-8 rounded-3xl shadow-lg border border-gray-100">
+        <h2 id="qText" class="text-2xl font-bold text-gray-800 mb-8 leading-tight">লোড হচ্ছে...</h2>
         <div id="options"></div>
+        <p id="res" class="text-red-500 text-center mt-4 font-bold h-6"></p>
     </div>
-
 </body>
 </html>
